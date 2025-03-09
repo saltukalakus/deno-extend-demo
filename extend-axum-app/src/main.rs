@@ -1,18 +1,29 @@
-use axum::{response::Html, routing::get, Router};
+use axum::{
+    response::{Html, IntoResponse},
+    routing::get,
+    Router,
+};
+use std::{net::SocketAddr};
+
+use tower_http::services::ServeDir;
+
 
 #[tokio::main]
 async fn main() {
-    // build our application with a route
-    let app = Router::new().route("/", get(handler));
+    // Build our application with a route
+    let app = Router::new()
+        .route("/", get(index))
+        .nest_service("/static", ServeDir::new("static"));
 
-    // run it
+    // Run it
+    let addr = SocketAddr::from(([127, 0, 0, 1], 3001));
+    println!("listening on {}", addr);
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3001")
         .await
         .unwrap();
-    println!("listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, app).await.unwrap();
 }
 
-async fn handler() -> Html<&'static str> {
-    Html("<h1>Hello, World!</h1>")
+async fn index() -> impl IntoResponse {
+    Html(include_str!("../static/index.html"))
 }
